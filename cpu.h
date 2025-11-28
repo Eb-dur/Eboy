@@ -61,3 +61,10 @@ enum REGISTER_MASK{
     IMM = 0b110
 };
 
+enum REGISTER_PAIR_MASK{
+    BC = 0b00,
+    DE = 0b01,
+    HL = 0b10,
+    SP = 0b11,
+};
+

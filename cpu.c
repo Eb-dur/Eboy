@@ -93,9 +93,10 @@ Byte xor_instr(struct CPU* cpu, Byte l_operand, Byte r_operand){
     return result;
 }
 
-Byte cp_instr(struct CPU* cpu,Byte l_operand, Byte r_operand){
-    
+void cp_instr(struct CPU* cpu,Byte l_operand, Byte r_operand){
+    sub_instr(cpu, l_operand, r_operand, 0);
 }
+
 
 
 void instruction_decoder(struct CPU* cpu){
@@ -113,7 +114,7 @@ void instruction_decoder(struct CPU* cpu){
     Byte cy;
 
     switch (prefix) {
-        case 0b00: // Mem instructions;
+        case 0b00: // Mem instructions and 16-bit arithemtic;
             break;
         case 0b01: // ld and halt
             break;
@@ -156,10 +157,10 @@ void instruction_decoder(struct CPU* cpu){
                                       );
                     break;
                 case ARI8_CP:
-                    cpu->A = cp_instr(cpu,
-                                      cpu->A,
-                                      get_register_operand(cpu, suffix)
-                                      );
+                    cp_instr(cpu,
+                            cpu->A,
+                            get_register_operand(cpu, suffix)
+                            );
                     break;
                 default:
 #ifdef DEBUG
@@ -205,10 +206,10 @@ void instruction_decoder(struct CPU* cpu){
                                           fetch_instruction(++cpu->PC)
                                           );
                     case ARI8_CP:
-                        cpu->A = cp_instr(cpu,
-                                          cpu->A,
-                                          fetch_instruction(++cpu->PC)
-                                          );
+                        cp_instr(cpu,
+                                 cpu->A,
+                                 fetch_instruction(++cpu->PC)
+                                 );
                     default:
 #ifdef DEBUG
                         fprintf(stderr, "Error: Could not decode arithmetics with prefix 0b11!\n");
