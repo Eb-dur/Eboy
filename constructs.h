@@ -91,6 +91,7 @@ Byte add_instr(struct CPU* cpu, Byte l_operand, Byte r_operand, Byte carry){
     if ((l_operand & 0x0F) + (r_operand & 0x0F) + carry > 0x0F) flag |= FLAG_MASK_H;
     if (!result) flag |= FLAG_MASK_Z;
     if (result <= l_operand) flag |= FLAG_MASK_CY;
+    cpu->F = flag;
     return result;
 }
 
@@ -100,21 +101,38 @@ Byte sub_instr(struct CPU* cpu, Byte l_operand, Byte r_operand, Byte carry){
     if ((l_operand & 0x0F) < ((r_operand & 0xF0) - carry)) flag |= FLAG_MASK_H;
     if (!result) flag |= FLAG_MASK_Z;
     if (result >= l_operand) flag |= FLAG_MASK_CY;
-    flag |= FLAG_MASK_Z;
+    flag |= FLAG_MASK_N;
+    cpu->F = flag;
+    return result;
+}
+
+Byte and_instr(struct CPU* cpu, Byte l_operand, Byte r_operand){
+    Byte flag = 0;
+    Byte result = l_operand & r_operand;
+    flag |= FLAG_MASK_H;
+    if (!result) flag |= FLAG_MASK_Z;
+    cpu->F = flag;
+    return result;
+}
+Byte or_instr(struct CPU* cpu, Byte l_operand, Byte r_operand){
+    Byte flag = 0;
+    Byte result = l_operand | r_operand;
+    if (!result) flag |= FLAG_MASK_Z;
+    cpu->F = flag;
     return result;
 }
 
 
 void instruction_decoder(struct CPU* cpu){
     Byte instruction = fetch_instruction(cpu->PC);
-    
-    // ADD 
+    //
+    // MATHEMATICAL OPERATIONS
+    //
     if ((instruction & 0b11111000) == 0b10000000){
         // ACC r into A
         Byte carry = (instruction & 0b00001000) ? 1 : 0;
         Byte operand = *get_register_operand(cpu, instruction & 0b111);
         Byte result = add_instr(cpu, cpu->A, operand, carry);
-        if (instruction & 0b00001000) result++;
         cpu->A = result;
         ++cpu->PC;
         ++cpu->cycle_queue;
@@ -145,7 +163,6 @@ void instruction_decoder(struct CPU* cpu){
         Byte carry = (instruction & 0b00001000) ? 1 : 0;
         Byte operand = *get_register_operand(cpu, instruction & 0b111);
         Byte result = sub_instr(cpu, cpu->A, operand, carry);
-        if (instruction & 0b00001000) result++;
         cpu->A = result;
         ++cpu->PC;
         ++cpu->cycle_queue;
@@ -169,6 +186,62 @@ void instruction_decoder(struct CPU* cpu){
         ++cpu->PC;
         cpu->cycle_queue += 2;
     }
+
+    //
+    // BOOLEAN OPERATIONS
+    //
+    else if ((instruction & 0b11111000) == 0b10100000) {
+        // AND R
+        Byte operand = *get_register_operand(cpu, instruction & 0b111);
+        Byte result = and_instr(cpu, cpu->A, operand);
+        cpu->A = result;
+        ++cpu->PC;
+        ++cpu->cycle_queue;
+    }
+    else if (instruction == 0b11100110) {
+        // AND I
+        Byte operand = fetch_instruction(++cpu->PC);
+        Byte result = and_instr(cpu, cpu->A, operand);
+        cpu->A = result;
+        ++cpu->PC;
+        cpu->cycle_queue += 2;
+    }
+    else if (instruction == 0b10100110) {
+        // AND mem
+        Mem_ptr mem_ptr = (((Mem_ptr) cpu->H) << 8) + cpu->L;
+        Byte operand = fetch_addr(mem_ptr);
+        Byte result = and_instr(cpu, cpu->A, operand);
+        cpu->A = result;
+        ++cpu->PC;
+        cpu->cycle_queue += 2;
+    }
+    else if ((instruction & 0b11111000) == 0b10110000) {
+        // OR R
+        Byte operand = *get_register_operand(cpu, instruction & 0b111);
+        Byte result = or_instr(cpu, cpu->A, operand);
+        cpu->A = result;
+        ++cpu->PC;
+        ++cpu->cycle_queue;
+    }
+    else if (instruction == 0b11110110) {
+        // AND I
+        Byte operand = fetch_instruction(++cpu->PC);
+        Byte result = or_instr(cpu, cpu->A, operand);
+        cpu->A = result;
+        ++cpu->PC;
+        cpu->cycle_queue += 2;
+    }
+    else if (instruction == 0b10110110) {
+        // AND mem
+        Mem_ptr mem_ptr = (((Mem_ptr) cpu->H) << 8) + cpu->L;
+        Byte operand = fetch_addr(mem_ptr);
+        Byte result = or_instr(cpu, cpu->A, operand);
+        cpu->A = result;
+        ++cpu->PC;
+        cpu->cycle_queue += 2;
+    }
+    // TODO: XOR
+    
         
 
 }
