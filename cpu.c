@@ -1,54 +1,6 @@
 #include <stdio.h>
 #include <stdbool.h>
-#include <stdint.h>
-
-#ifndef DEBUG
-#define DEBUG
-#endif
-
-#define RAM_SIZE 32000
-#define VRAM_SIZE 16000
-
-typedef unsigned char Byte;
-typedef uint16_t Mem_ptr;
-static Byte RAM[RAM_SIZE];
-static Byte VRAM[VRAM_SIZE];
-
-struct CPU{
-    unsigned long long cycle;
-    unsigned long cycle_queue;
-    Mem_ptr PC;
-    Mem_ptr SP;
-    Byte A; // Storing data afterarithmetic and logical operations
-    Byte F; // Flag register Z N H CY X X X X
-    // Z: Set to 1 when the result of an operation is 0; otherwise reset.
-    // N: Set to 1 following execution of the substruction instruction, regardless of the result.
-    // H: Set to 1 when an operation results in carrying from or borrowing to bit 3.
-    // CY: Set to 1 when an operation results in carrying from or borrowing to bit 7.
-    Byte B; Byte C;
-    Byte D; Byte E;
-    Byte H; Byte L;
-
-};
-
-
-enum FLAG_MASM{
-    FLAG_MASK_Z = 0b1000000,
-    FLAG_MASK_N = 0b0100000,
-    FLAG_MASK_H = 0b0010000,
-    FLAG_MASK_CY = 0b0001000
-};
-
-enum REGISTER_MASK{
-    A = 0b111,
-    B = 0b000,
-    C = 0b001,
-    D = 0b010,
-    E = 0b011,
-    H = 0b100,
-    L = 0b101
-};
-
+#include "cpu.h"
 // TODO: Make instruction fetch according to PM specs
 Byte fetch_instruction(Mem_ptr pc){
     Byte instruction = 0;
@@ -58,7 +10,6 @@ Byte fetch_instruction(Mem_ptr pc){
 Mem_ptr fetch_addr(Mem_ptr ptr){
     return 0;
 }
-
 
 Byte* get_register_operand(struct CPU *cpu, Byte operand){
     switch (operand){
@@ -117,6 +68,14 @@ Byte and_instr(struct CPU* cpu, Byte l_operand, Byte r_operand){
 Byte or_instr(struct CPU* cpu, Byte l_operand, Byte r_operand){
     Byte flag = 0;
     Byte result = l_operand | r_operand;
+    if (!result) flag |= FLAG_MASK_Z;
+    cpu->F = flag;
+    return result;
+}
+
+Byte xor_instr(struct CPU* cpu, Byte l_operand, Byte r_operand){
+    Byte flag = 0;
+    Byte result = l_operand ^ r_operand;
     if (!result) flag |= FLAG_MASK_Z;
     cpu->F = flag;
     return result;
@@ -241,7 +200,31 @@ void instruction_decoder(struct CPU* cpu){
         cpu->cycle_queue += 2;
     }
     // TODO: XOR
-    
+    else if ((instruction & 0b11111000) == 0b10101000) {
+        // OR R
+        Byte operand = *get_register_operand(cpu, instruction & 0b111);
+        Byte result = xor_instr(cpu, cpu->A, operand);
+        cpu->A = result;
+        ++cpu->PC;
+        ++cpu->cycle_queue;
+    }
+    else if (instruction == 0b11101110) {
+        // AND I
+        Byte operand = fetch_instruction(++cpu->PC);
+        Byte result = xor_instr(cpu, cpu->A, operand);
+        cpu->A = result;
+        ++cpu->PC;
+        cpu->cycle_queue += 2;
+    }
+    else if (instruction == 0b10101110) {
+        // AND mem
+        Mem_ptr mem_ptr = (((Mem_ptr) cpu->H) << 8) + cpu->L;
+        Byte operand = fetch_addr(mem_ptr);
+        Byte result = xor_instr(cpu, cpu->A, operand);
+        cpu->A = result;
+        ++cpu->PC;
+        cpu->cycle_queue += 2;
+    }
         
 
 }
