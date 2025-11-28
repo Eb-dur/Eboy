@@ -8,8 +8,9 @@
 #define RAM_SIZE 32000
 #define VRAM_SIZE 16000
 
-typedef unsigned char Byte;
+typedef uint8_t Byte;
 typedef uint16_t Mem_ptr;
+
 static Byte RAM[RAM_SIZE];
 static Byte VRAM[VRAM_SIZE];
 
@@ -27,7 +28,6 @@ struct CPU{
 
 };
 
-// 
 
 enum FLAG_MASK{
     FLAG_MASK_Z = 0b1000000,
@@ -35,7 +35,6 @@ enum FLAG_MASK{
     FLAG_MASK_H = 0b0010000,
     FLAG_MASK_CY = 0b0001000
 };
-
 
 
 enum ARITHM_ID{
@@ -47,6 +46,9 @@ enum ARITHM_ID{
     ARI8_XOR = 0b101,
     ARI8_OR  = 0b110,
     ARI8_CP  = 0b111,
+    ARI_INCR = 0b100,
+    ARI_DECR = 0b101,
+    ARI16_ADD = 0b001,
 };
 
 enum REGISTER_MASK{
