@@ -1,4 +1,5 @@
 #include <stdint.h>
+#include <stdbool.h>
 
 #ifndef DEBUG
 #define DEBUG
@@ -15,6 +16,7 @@ static Byte VRAM[VRAM_SIZE];
 struct CPU{
     unsigned long long cycle;
     unsigned long cycle_queue;
+    bool half_clock_speed;
     Mem_ptr PC;
     Mem_ptr SP;
     Byte A; // Storing data afterarithmetic and logical operations
@@ -25,12 +27,26 @@ struct CPU{
 
 };
 
+// 
 
-enum FLAG_MASM{
+enum FLAG_MASK{
     FLAG_MASK_Z = 0b1000000,
     FLAG_MASK_N = 0b0100000,
     FLAG_MASK_H = 0b0010000,
     FLAG_MASK_CY = 0b0001000
+};
+
+
+
+enum ARITHM_ID{
+    ARI8_ADD = 0b000,
+    ARI8_ADC = 0b001,
+    ARI8_SUB = 0b010,
+    ARI8_SBC = 0b011,
+    ARI8_AND = 0b100,
+    ARI8_XOR = 0b101,
+    ARI8_OR  = 0b110,
+    ARI8_CP  = 0b111,
 };
 
 enum REGISTER_MASK{
@@ -40,6 +56,8 @@ enum REGISTER_MASK{
     D = 0b010,
     E = 0b011,
     H = 0b100,
-    L = 0b101
+    L = 0b101,
+    MEM = 0b110,
+    IMM = 0b110
 };
 

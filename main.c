@@ -1,21 +1,11 @@
 #include "cpu.h"
 
 
-
-
-
-
-
-
-
-
-
-
-
 int main(){
     struct CPU cpu = {
         .cycle = 0,
         .cycle_queue = 0,
+        .half_clock_speed = 0,
         .PC = 0,
         .SP = 0,
         .A = 0,
