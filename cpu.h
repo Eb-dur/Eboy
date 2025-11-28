@@ -18,6 +18,7 @@ struct CPU{
     unsigned long long cycle;
     unsigned long cycle_queue;
     bool half_clock_speed;
+    bool halt;
     Mem_ptr PC;
     Mem_ptr SP;
     Byte A; // Storing data afterarithmetic and logical operations

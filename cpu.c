@@ -73,6 +73,32 @@ Mem_ptr get_register_operand_16(struct CPU *cpu, Byte operand){
     return (((Mem_ptr) h) << 8) + l;
 }
 
+void write_to_register_16(struct CPU *cpu,Byte operand, Mem_ptr val){
+    switch (operand) {
+        case BC:
+            cpu->B = (Byte) val >> 8;
+            cpu->C = (Byte) val;
+            break;
+        case DE:
+            cpu->D = (Byte) val >> 8;
+            cpu->E = (Byte) val;
+            break;
+        case HL:
+            cpu->H = (Byte) val >> 8;;
+            cpu->L = (Byte) val; 
+            break;
+        case SP:
+            cpu->SP = val;
+        default:
+#ifdef DEBUG
+            fprintf(stderr, "Error: Could not decode 16-bit register!\n");
+#endif
+            break;
+    }
+}
+
+
+
 Byte get_register_operand(struct CPU *cpu, Byte operand){
     Mem_ptr addr;
     switch (operand){
@@ -200,6 +226,7 @@ void instruction_decoder(struct CPU* cpu){
     Byte middle = instruction & 0b00111000;
     Byte cy;
     Byte result_word;
+    Byte *dest;
     Mem_ptr result_dword;
     switch (prefix) {
         case 0b00: // Mem instructions and 16-bit arithemtic;
@@ -219,11 +246,33 @@ void instruction_decoder(struct CPU* cpu){
                                                 get_register_operand_16(cpu, HL),
                                                 get_register_operand_16(cpu, (middle >> 4))
                                                 );
+                    write_to_register_16(cpu, HL, result_dword);
                     cpu->cycle_queue += 2;
                     break;
-            }
+                case 0b110:
+                    dest = get_register_ptr(cpu, middle);
+                    result_word = fetch_instruction(++cpu->PC);
+                    *dest = result_word;
+                    cpu->cycle_queue += 2;
+                    break;
+                case 0b010:
+                    if (middle & 0b001)
+                        cpu->A = *get_mem_ptr(get_register_operand_16(cpu, (middle >> 4)));
+                    else
+                        *get_mem_ptr(get_register_operand_16(cpu, (middle >> 4))) = cpu->A;
+                    cpu->cycle_queue += 2;
+                    break;
+            }       
             break;
         case 0b01: // ld and halt
+            if (middle + suffix == 0b110110)
+                cpu->halt = true;
+            else{
+                Byte *dest = get_register_ptr(cpu, middle);
+                Byte src   = get_register_operand(cpu, suffix);
+                *dest = src;
+                ++cpu->cycle_queue;
+            }
             break;
         case 0b10: // 8bit arithmetic Registers and mem
             switch (middle) {
@@ -285,7 +334,7 @@ void instruction_decoder(struct CPU* cpu){
             break;
         case 0b11: // Imm arithmetic and control instr
             if (suffix == IMM){
-                switch (middle) {
+                switch (middle >> 3) {
                     case ARI8_ADD:
                     case ARI8_ADC:
                         cy = cpu->F & FLAG_MASK_CY & instruction;
@@ -343,6 +392,18 @@ void instruction_decoder(struct CPU* cpu){
             else if( middle + suffix ==  0b101000){
                 cpu->SP = add_instr_16(cpu, cpu->SP, fetch_instruction(++cpu->PC));
                 cpu->cycle_queue += 4;
+            }
+            // LD A <- (C) | (C) <- A;
+            else if(suffix == 0b010){
+                if ((middle >> 3) == 0b100){
+                    dest = get_mem_ptr(0xFF00 + get_register_operand(cpu, C));
+                    *dest = cpu->A;
+                }
+                else {
+                    result_word = *get_mem_ptr(0xFF00 + get_register_operand(cpu, C));
+                    cpu->A = result_word;
+                }
+                cpu->cycle_queue += 2;
             }
             break;
     }
