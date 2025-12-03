@@ -398,12 +398,27 @@ void instruction_decoder(struct CPU* cpu){
                 if ((middle >> 3) == 0b100){
                     dest = get_mem_ptr(0xFF00 + get_register_operand(cpu, C));
                     *dest = cpu->A;
+                    cpu->cycle_queue += 2;
                 }
                 else {
                     result_word = *get_mem_ptr(0xFF00 + get_register_operand(cpu, C));
                     cpu->A = result_word;
+                    cpu->cycle_queue += 2;
                 }
-                cpu->cycle_queue += 2;
+            }
+            else if (suffix == 0b000) {
+                if ((middle >> 3) == 0b100){
+                    Mem_ptr addr = 0xFF00 + fetch_instruction(++cpu->PC);
+                    cpu->A = fetch_at_addr(addr);
+                    cpu->cycle_queue += 3;
+                }
+                if ((middle >> 3) == 0b110){
+                    Mem_ptr addr = 0xFF00 + fetch_instruction(++cpu->PC);
+                    dest = get_mem_ptr(addr);
+                    *dest = cpu->A;
+                    cpu->cycle_queue += 3;
+                }
+                
             }
             break;
     }
